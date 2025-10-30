@@ -1,0 +1,24 @@
+title: Renewable Energy vs Electricity Prices in the US
+
+This project explores the complext relationship between renewable energy usage and electricity prices 
+across the United States. 
+My main question I explored was: Do states that rely on renewable energy tend to have 
+lower average energy prices. 
+
+I used the Renew 2021 to 2023 datasets and a cleaned price data set to understand this 
+relationship. The EV dataset which I cleaned provided vehile registrations by state.
+My first step in the prokect was standardizing state names and two-letter abbreviations. 
+I then combined datasets using the join() function by State. 
+
+The Map Visualization had a hard time rendering. I had the map downloaded for a while, ended up adding 
+some more code, then it went away. I have tried troubleshooting for an hour or so, and no luck. 
+I will still address the trends I noticed. 
+
+California, despite strong renewable investments, still displays hihger prices, likely due to 
+large costs and managements. Fossil fuel heavy states like Texas, display low prices and moderate 
+renewable energy percentages, reflecting natural gas availbility. 
+
+While clean energy growth is essential for sustainability, the short term relationship 
+found in these data sets shows a complex relationship, illustrating high infraststructure costs 
+and aiming towards a stabilizing energy price. 
+

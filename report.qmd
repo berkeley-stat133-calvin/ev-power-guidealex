@@ -8,16 +8,93 @@ format: typst
 ## **Part 0: libraries**
 
 ```{r}
+library(dplyr)
+library(readr)
+library(stringr)
+library(tidyr)
+
+renew_21 <- read_csv("data/renew-use-2021.csv")
+renew_22 <- read_csv("data/renew-use-2022.csv")
+renew_23 <- read_csv("data/renew-use-2023.csv")
+
+total_21 <- read_csv("data/total-use-2021.csv")
+total_22 <- read_csv("data/total-use-2022.csv")
+total_23 <- read_csv("data/total-use-2023.csv")
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+price_raw <- read_csv("data/av-energy-price-2021-2023.csv", skip = 3)
+ev <- read_csv("data/ev-registrations-by-state-2023.csv")
+
 
 ```
 
 ## **Part 1:** **Defining Research Question**
 
-Chosen Question:
+Chosen Question: Do states with higher renewable usage have lower average electricity prices?
 
 ## **Part 2: Data Preparation and Cleaning**
 
 ```{r}
+
+renew_21 <- renew_21 |>
+  mutate(State = as.character(State)) |>       
+  mutate(State = str_to_upper(str_trim(State)))
+
+renew_22 <- renew_22 |>
+  mutate(State = as.character(State)) |>      
+  mutate(State = str_to_upper(str_trim(State)))
+
+renew_23 <- renew_23 |>
+  mutate(State = as.character(State)) |>     
+  mutate(State = str_to_upper(str_trim(State)))
+
+
+
+ev <- ev |>
+  rename(
+    State = "electric vehicle registrations_by_state (2023)",
+    EV_count = "...2"
+  ) |>
+mutate(
+   State = as.character(State),
+   State = str_to_upper(str_trim(State))
+ ) |>
+filter(State != "US")
+
+ev <- ev |>
+  mutate(
+    State = str_to_title(State),
+    State = state.abb[match(State, state.name)],
+    State = if_else(is.na(State) & str_detect(State, "District Of Columbia"), "DC", State)
+  )
+
+head(price_raw)
+
+
+
+```
+
+```{r}
+
+lines <- readLines("data/av-energy-price-2021-2023.csv")
+
+lines_clean <- lines[str_detect(lines, "^[A-Z]{2},")]
+
+price_raw <- tibble(raw = lines_clean)
+
+price_clean <- price_raw |>
+  separate(raw, into = c("State", "price_2021", "price_2022", "price_2023"), sep = ",", fill = "right")
+
+price_clean <- price_clean |>
+  mutate(
+    across(starts_with("price_"), ~as.numeric(str_extract(.x, "\\d+\\.\\d+"))),
+    State = str_to_upper(str_trim(State))
+  ) |>
+  filter(State != "US")
 
 ```
 
@@ -25,10 +102,54 @@ Chosen Question:
 
 ```{r}
 
+energy_price <- renew_23 |>
+  inner_join(price_clean, by = "State")
+energy_price <- energy_price |>
+  mutate(
+    pct_renewable = (Renewable_Energy / Total_Energy) * 100, 
+    elog_price = log(price_2023)  
+  )
+
+glimpse(energy_price_ev)
+summary(energy_price_ev$pct_renewable)
+cor(energy_price_ev$pct_renewable, energy_price_ev$price_2023, use = "complete.obs")
+
 ```
 
 ## **Part 4: Mapping Visualization**
 
 ```{r}
+install.packages(c("rnaturalearth", "rnaturalearthdata", "sf", "viridis", "ggplot2", "dplyr"))
+
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+us_states <- rnaturalearth::ne_states(country = "United States of America", returnclass = "sf")
+
+
+us_states <- us_states |>
+  filter(!name %in% c("Hawaii", "Alaska", "Puerto Rico"))  
+map_data <- us_states |>
+  mutate(State = postal) |>   
+  left_join(energy_price_ev, by = "State")
+
+ggplot(map_data) +
+  geom_sf(aes(fill = pct_renewable)) +
+  scale_fill_viridis(
+    name = "% Renewable Energy",
+    option = "C", direction = -1
+  ) +
+  labs(
+    title = "Share of Renewable Energy by State (2023)",
+    subtitle = "Darker color = higher renewable share",
+    caption = "Data: DOE, EIA, and Stat 133 Project"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold", size = 16)
+  )
+
+
 
 ```
